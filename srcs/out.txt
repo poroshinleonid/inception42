@@ -1,0 +1,383 @@
+#!bin/sh
+
+if [ ! -d "/var/lib/mysql/mysql" ]; then
+
+        chown -R mysql:mysql /var/lib/mysql
+
+        # init database
+        mysql_install_db --basedir=/usr --datadir=/var/lib/mysql --user=mysql --rpm
+
+        tfile=`mktemp`
+        if [ ! -f "$tfile" ]; then
+                return 1
+        fi
+fi
+
+if [ ! -d "/var/lib/mysql/wordpress" ]; then
+
+        cat << EOF > /tmp/create_db.sql
+USE mysql;
+FLUSH PRIVILEGES;
+DELETE FROM     mysql.user WHERE User='';
+DROP DATABASE test;
+DELETE FROM mysql.db WHERE Db='test';
+DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
+ALTER USER 'root'@'localhost' IDENTIFIED BY '${DB_ROOT}';
+CREATE DATABASE ${DB_NAME} CHARACTER SET utf8 COLLATE utf8_general_ci;
+CREATE USER '${DB_USER}'@'%' IDENTIFIED by '${DB_PASS}';
+GRANT ALL PRIVILEGES ON wordpress.* TO '${DB_USER}'@'%';
+FLUSH PRIVILEGES;
+EOF
+        # run init.sql
+        /usr/bin/mysqld --user=mysql --bootstrap < /tmp/create_db.sql
+        rm -f /tmp/create_db.sql
+fi
+.git
+.env
+FROM alpine:3.19
+
+ARG DB_NAME \
+	DB_USER \
+	DB_PASS
+RUN apk update && apk add --no-cache mariadb mariadb-client
+
+RUN mkdir /var/run/mysqld; \
+    chmod 777 /var/run/mysqld; \
+    { echo '[mysqld]'; \
+      echo 'skip-host-cache'; \
+      echo 'skip-name-resolve'; \
+      echo 'bind-address=0.0.0.0'; \
+    } | tee  /etc/my.cnf.d/docker.cnf; \
+    sed -i "s|skip-networking|skip-networking=0|g" \
+      /etc/my.cnf.d/mariadb-server.cnf
+
+RUN mysql_install_db --user=mysql --datadir=/var/lib/mysql
+
+EXPOSE 3306
+
+COPY requirements/mariadb/conf/create_db.sh .
+RUN sh create_db.sh && rm create_db.sh
+USER mysql
+CMD ["/usr/bin/mysqld", "--skip-log-error"]
+
+
+mkdir /var/run/mysqld;
+chmod 777 /var/run/mysqld;
+{
+	echo '[mysqld]';
+	echo 'skip-host-cache';
+	echo 'skip-name-resolve';
+	echo 'bind-address=0.0.0.0';
+} | tee /etc/my.cnf.d/docker.cnf;
+
+sed -i "s|skip-networking|skip-networking=0|g" /etc/my.cnf.d/mariadb-server.cnf
+#!bin/sh
+if [ ! -f "/var/www/wp-config.php" ]; then
+cat << EOF > /var/www/wp-config.php
+<?php
+define( 'DB_NAME', '${DB_NAME}' );
+define( 'DB_USER', '${DB_USER}' );
+define( 'DB_PASSWORD', '${DB_PASS}' );
+define( 'DB_HOST', 'mariadb' );
+define( 'DB_CHARSET', 'utf8' );
+define( 'DB_COLLATE', '' );
+define('FS_METHOD','direct');
+\$table_prefix = 'wp_';
+define( 'WP_DEBUG', false );
+if ( ! defined( 'ABSPATH' ) ) {
+define( 'ABSPATH', __DIR__ . '/' );}
+require_once ABSPATH . 'wp-settings.php';
+define('WP_DEBUG', true);
+define('WP_DEBUG_LOG', true);
+define('WP_DEBUG_DISPLAY', true);
+EOF
+fi
+.git
+.env
+FROM alpine:3.19
+
+ARG DB_NAME \
+	DB_USER \
+	DB_PAS
+
+RUN apk update && apk upgrade && apk add --no-cache \
+	php \
+	php-fpm \
+	php-mysqli\
+	php-json \
+	php-curl \
+	php-dom \
+	php-exif \
+	php-fileinfo \
+	php-mbstring \
+	php-openssl \
+	php-xml \
+	php-zip \
+	php-redis \
+	wget \
+	unzip && \
+	sed -i "s|listen = 127.0.0.1:9000|listen = 9000|g" \
+	/etc/php82/php-fpm.d/www.conf && \
+	sed -i "s|;listen.owner = nobody|listen.owner = nobody|g" \
+	/etc/php82/php-fpm.d/www.conf && \
+	sed -i "s|;listen.group = nobody|listen.group = nobody|g" \
+	/etc/php82/php-fpm.d/www.conf && \
+	rm -f /var/cache/apk/*
+WORKDIR /var/www
+
+RUN wget https://wordpress.org/latest.zip && \
+	unzip latest.zip && \
+	cp -rf wordpress/* . && \
+	rm -rf wordpress latest.zip && \
+	ls -lah
+
+COPY ./requirements/wordpress/conf/wp-config-create.sh .
+RUN sh wp-config-create.sh && rm wp-config-create.sh && \
+	chmod -R 0777 ./wp-content/
+RUN ls -l /usr/sbin/
+
+CMD ["/usr/sbin/php-fpm82", "-F"]
+
+#!/bin/bash
+if [ ! -d "/home/${USER}/data" ]; then
+        mkdir ~/data
+        mkdir ~/data/mariadb
+        mkdir ~/data/wordpress
+fi
+server {
+    access_log /var/www/log/nginx/access.log;
+    error_log /var/www/log/nginx/error.log;
+	listen 443 ssl;
+	server_name lporoshi.42.fr www.lporoshi.42.fr;
+	root /var/www/;
+	index index.php index.html;
+	ssl_certificate /etc/nginx/ssl/lporoshi.42.fr.crt;
+	ssl_certificate_key /etc/nginx/ssl/lporoshi.42.fr.key;
+	ssl_protocols TLSv1.2 TLSv1.3;
+	ssl_session_timeout 10m;
+	keepalive_timeout 70;
+	location / {
+		try_files $uri $uri/ /index.php?$args;
+		add_header Last-Modified $date_gmt;
+		add_header Cache-Control 'no-store, no-cache';
+		if_modified_since off;
+		expires off;
+		etag off;
+
+	}
+	location ~ \.php$ {
+		fastcgi_split_path_info ^(.+\.php)(/.+)$;
+		fastcgi_pass wordpress:9000;
+		fastcgi_index index.php;
+		include fastcgi_params;
+		fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+		fastcgi_param PATH_INFO $fastcgi_path_info;
+	}
+}
+
+.git
+.env
+FROM alpine:3.19
+
+RUN apk update && apk upgrade && apk add --no-cache nginx
+
+EXPOSE 443
+
+CMD ["nginx", "-g", "daemon off;"]
+2024/10/14 18:19:56 [emerg] 1#1: "http" directive is not allowed here in /etc/nginx/http.d/nginx.conf:30
+2024/10/14 18:19:57 [emerg] 1#1: "http" directive is not allowed here in /etc/nginx/http.d/nginx.conf:30
+2024/10/14 18:19:58 [emerg] 1#1: "http" directive is not allowed here in /etc/nginx/http.d/nginx.conf:30
+2024/10/14 18:20:00 [emerg] 1#1: "http" directive is not allowed here in /etc/nginx/http.d/nginx.conf:30
+2024/10/14 18:20:01 [emerg] 1#1: "http" directive is not allowed here in /etc/nginx/http.d/nginx.conf:30
+2024/10/14 18:20:04 [emerg] 1#1: "http" directive is not allowed here in /etc/nginx/http.d/nginx.conf:30
+2024/10/14 18:20:36 [emerg] 1#1: "http" directive is not allowed here in /etc/nginx/http.d/nginx.conf:2
+2024/10/14 18:20:38 [emerg] 1#1: "http" directive is not allowed here in /etc/nginx/http.d/nginx.conf:2
+2024/10/14 18:20:39 [emerg] 1#1: "http" directive is not allowed here in /etc/nginx/http.d/nginx.conf:2
+2024/10/14 18:20:40 [emerg] 1#1: "http" directive is not allowed here in /etc/nginx/http.d/nginx.conf:2
+2024/10/14 18:20:41 [emerg] 1#1: "http" directive is not allowed here in /etc/nginx/http.d/nginx.conf:2
+2024/10/14 18:20:43 [emerg] 1#1: open() "/var/www/log/nginx/access.log" failed (2: No such file or directory)
+2024/10/14 18:20:49 [emerg] 1#1: open() "/var/www/log/nginx/access.log" failed (2: No such file or directory)
+2024/10/14 18:20:51 [emerg] 1#1: open() "/var/www/log/nginx/access.log" failed (2: No such file or directory)
+2024/10/14 18:20:52 [emerg] 1#1: open() "/var/www/log/nginx/access.log" failed (2: No such file or directory)
+-----BEGIN CERTIFICATE-----
+MIIEETCCAnmgAwIBAgIQSDBN6hnw1fndwLs9EtE8KDANBgkqhkiG9w0BAQsFADBf
+MR4wHAYDVQQKExVta2NlcnQgZGV2ZWxvcG1lbnQgQ0ExGjAYBgNVBAsMEWxwb3Jv
+c2hpQGxwb3Jvc2hpMSEwHwYDVQQDDBhta2NlcnQgbHBvcm9zaGlAbHBvcm9zaGkw
+HhcNMjQxMDE0MTI0MDUyWhcNMjcwMTE0MTM0MDUyWjBFMScwJQYDVQQKEx5ta2Nl
+cnQgZGV2ZWxvcG1lbnQgY2VydGlmaWNhdGUxGjAYBgNVBAsMEWxwb3Jvc2hpQGxw
+b3Jvc2hpMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAy4tzpZ4mHWcE
+2sIXR1dGv7IhD43HJO4jn1L+CyAZoCDmUOWXNdcISGxDlvfoXVNWxrAea/P31JuS
+F81wBVH3Ju6QL7kgA1O30saI5GCsdONwF75Nw/OdKQ3f605KDhxZ3U6dLylr7QEh
+qCwl9FAgJXiSY88TxapqsXb0AWyYuzXwYFf4/M4OJc6ZfXTDRaUYmBN4ZM/8GC9C
+AxYm/GQx8+UkdJ4IKPoXRb6moAGyGojt/rdc5sp52vv1YQoIhhYQRZClm0mw77Z0
+XWk4wTTXb7BfrfDJ/KzC6cW8f7Ka6Ki9KPkdQSJeGg4oAjmc5GfKHFxpY1KFhKlV
+gb8fXvUjiwIDAQABo2MwYTAOBgNVHQ8BAf8EBAMCBaAwEwYDVR0lBAwwCgYIKwYB
+BQUHAwEwHwYDVR0jBBgwFoAUFnC4r0l1vknzPYNePvpjgyTZWU8wGQYDVR0RBBIw
+EIIObHBvcm9zaGkuNDIuZnIwDQYJKoZIhvcNAQELBQADggGBAHc+fv1yYy+SlL7O
+06IoV+8PNl9AuC1qDFNAqNmwlfXNIwE0xaRNcWcrCjQjMvvUrdqB/7ocmKeSJ5yl
+UF1m4XwLNRwXVG4NV/fA05gEofDe4kHswGmr2+eYGpOe7aX+9cZHT1/Up7MhPmrz
+WM/qGhNzZ1NagVL5YledoN0/fcGiYxPLcv3978mbCVJ8oKKiFPgN7T1lyvcRomfm
+A4YPttJrUXyyjbw4dUVpMkwZOx2a27nakNy90Q92rLl+LTql2g4nNufZ7hNAYpHt
+jtZW6/Rn9k8xkk2hpi+WgWAJyPOvVyb0C5+E2htxdMiF2Jj/7WKtqoaV9uJiPmVZ
+cK/Q7eOqt0W3XDAarSAv4fVn7uoYZqeRg6EkGMg8e0x0+JzMk+vGTbAKrHdhrpsQ
+cvJHXSUeLbU3mVRNQP/NCcweVbtNq6dyUnAm+IayzJ5OljgBevRCpWonbBcyI3zO
+rxHnSev2u8uIeq9D0b6DuttaIKF3cSiQbKw7c4SCcL5e/GRkrQ==
+-----END CERTIFICATE-----
+-----BEGIN PRIVATE KEY-----
+MIIEwAIBADANBgkqhkiG9w0BAQEFAASCBKowggSmAgEAAoIBAQDLi3OlniYdZwTa
+whdHV0a/siEPjcck7iOfUv4LIBmgIOZQ5Zc11whIbEOW9+hdU1bGsB5r8/fUm5IX
+zXAFUfcm7pAvuSADU7fSxojkYKx043AXvk3D850pDd/rTkoOHFndTp0vKWvtASGo
+LCX0UCAleJJjzxPFqmqxdvQBbJi7NfBgV/j8zg4lzpl9dMNFpRiYE3hkz/wYL0ID
+Fib8ZDHz5SR0nggo+hdFvqagAbIaiO3+t1zmynna+/VhCgiGFhBFkKWbSbDvtnRd
+aTjBNNdvsF+t8Mn8rMLpxbx/sproqL0o+R1BIl4aDigCOZzkZ8ocXGljUoWEqVWB
+vx9e9SOLAgMBAAECggEBAL7RMg6ej37a+EsYz/f6kwHdPW82a+5sLgsMI8tMQZnD
+ngdS5Yn81/AFRuv95uGu4lgL/ckYg0rWuYQE/TKPn9LorVWACMn1rwwzQVxQYPyH
+x6sKph7AgKJfNn+C+pv16i01qNfwzhP3DpV5Je+/OhPGz/4vwIp7c+CA8slvBFPj
+1kBkAenA2AN59S43/4dKLKG9q3XUCJmcWODdslSXmNqd7jFCt27mqKIbsM9xBmG7
+8lVD6oQneChwtK+zaB/ff7vwynnUSSeEzW1GlJrSap0yj8jMfex96Khyd4u5UgVb
+DLY9k9TfqGlS4jJx9gLlBO5NoGOPIhESsjHobSDxRYECgYEA5ATBA8oHCEALsn6X
+q1erS/5lw5ly7Fq44Tz4P73Oz5qSUsyEe5u606+BfZN6tTQfItHxP2EdWOyoIzS6
+9+C/2QB9vLbx9IsH8aajB63iI5CJT6sU1oRYqlB0cNvWVy1EZ7Pxl5oACBX2sEtD
+ZSgkRJwaQmYtI6J2VCGSEbkCdMsCgYEA5IXY/a7NIeereWWvdvFDutvUD2gChU5U
+55RRWWHzebtTdRALJVoGa1BAyje5ehlTQWjGGX0NG6oinZD9QH3FYtGWIpgwNMeG
+b2etUip/k5f2lBhbvvcPeCcz4v3jLrMd0vU+Jc24X+/izVb3yFJag6ZOhCsz82j8
+WnZNjK2M9EECgYEAqiNV9kLX7nMDh2NoPmSDH4gqXMHx+6RSEVbSEZXKbCP1DK0o
+KadwxyVM5OuXgv/qP6wRa+5F3KVxbBubavwbiosQRzDm50aaXdiuCzvW4hymKHkK
+amqEUkkIKXIPxCq1wP+GxE0XuvDQiokON7u1HDCyc1sUUWOXEX2fJXQ7/fMCgYEA
+kaKTZSiPZnokF5usNRsQ1PbfsGnSoW4IQgWNym7YIc42I7Zzw/wZdy6P+8+DjsKx
+AlBpXzkIr4a/xLbwDreYoZ98FNP0dM5raHgkRub6ou8Hn93eKld9Lk+di53NuKdB
+7H2Ke8EdLVbNrZstEicZtCi6hRSbaRaRLH2UcoDwAYECgYEAluxnLjG5PiGN4CtK
+zwrjxdoiJEWo3CBr6xsJT/u3ZkRRvNZS1VLWV62PMEzueXojO0cHKBNp9vMt0nRn
+KWCQVpUTHMo2vR0ZBAw4ZJfaNFys/YD5aaCPMvorW/TJvf1ZvZAu2I+xR9GyLO9x
+razU2nUkkWYJB+GS7fSpvkr1Ud0=
+-----END PRIVATE KEY-----
+-----BEGIN CERTIFICATE-----
+MIIEETCCAnmgAwIBAgIQSDBN6hnw1fndwLs9EtE8KDANBgkqhkiG9w0BAQsFADBf
+MR4wHAYDVQQKExVta2NlcnQgZGV2ZWxvcG1lbnQgQ0ExGjAYBgNVBAsMEWxwb3Jv
+c2hpQGxwb3Jvc2hpMSEwHwYDVQQDDBhta2NlcnQgbHBvcm9zaGlAbHBvcm9zaGkw
+HhcNMjQxMDE0MTI0MDUyWhcNMjcwMTE0MTM0MDUyWjBFMScwJQYDVQQKEx5ta2Nl
+cnQgZGV2ZWxvcG1lbnQgY2VydGlmaWNhdGUxGjAYBgNVBAsMEWxwb3Jvc2hpQGxw
+b3Jvc2hpMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAy4tzpZ4mHWcE
+2sIXR1dGv7IhD43HJO4jn1L+CyAZoCDmUOWXNdcISGxDlvfoXVNWxrAea/P31JuS
+F81wBVH3Ju6QL7kgA1O30saI5GCsdONwF75Nw/OdKQ3f605KDhxZ3U6dLylr7QEh
+qCwl9FAgJXiSY88TxapqsXb0AWyYuzXwYFf4/M4OJc6ZfXTDRaUYmBN4ZM/8GC9C
+AxYm/GQx8+UkdJ4IKPoXRb6moAGyGojt/rdc5sp52vv1YQoIhhYQRZClm0mw77Z0
+XWk4wTTXb7BfrfDJ/KzC6cW8f7Ka6Ki9KPkdQSJeGg4oAjmc5GfKHFxpY1KFhKlV
+gb8fXvUjiwIDAQABo2MwYTAOBgNVHQ8BAf8EBAMCBaAwEwYDVR0lBAwwCgYIKwYB
+BQUHAwEwHwYDVR0jBBgwFoAUFnC4r0l1vknzPYNePvpjgyTZWU8wGQYDVR0RBBIw
+EIIObHBvcm9zaGkuNDIuZnIwDQYJKoZIhvcNAQELBQADggGBAHc+fv1yYy+SlL7O
+06IoV+8PNl9AuC1qDFNAqNmwlfXNIwE0xaRNcWcrCjQjMvvUrdqB/7ocmKeSJ5yl
+UF1m4XwLNRwXVG4NV/fA05gEofDe4kHswGmr2+eYGpOe7aX+9cZHT1/Up7MhPmrz
+WM/qGhNzZ1NagVL5YledoN0/fcGiYxPLcv3978mbCVJ8oKKiFPgN7T1lyvcRomfm
+A4YPttJrUXyyjbw4dUVpMkwZOx2a27nakNy90Q92rLl+LTql2g4nNufZ7hNAYpHt
+jtZW6/Rn9k8xkk2hpi+WgWAJyPOvVyb0C5+E2htxdMiF2Jj/7WKtqoaV9uJiPmVZ
+cK/Q7eOqt0W3XDAarSAv4fVn7uoYZqeRg6EkGMg8e0x0+JzMk+vGTbAKrHdhrpsQ
+cvJHXSUeLbU3mVRNQP/NCcweVbtNq6dyUnAm+IayzJ5OljgBevRCpWonbBcyI3zO
+rxHnSev2u8uIeq9D0b6DuttaIKF3cSiQbKw7c4SCcL5e/GRkrQ==
+-----END CERTIFICATE-----
+-----BEGIN PRIVATE KEY-----
+MIIEwAIBADANBgkqhkiG9w0BAQEFAASCBKowggSmAgEAAoIBAQDLi3OlniYdZwTa
+whdHV0a/siEPjcck7iOfUv4LIBmgIOZQ5Zc11whIbEOW9+hdU1bGsB5r8/fUm5IX
+zXAFUfcm7pAvuSADU7fSxojkYKx043AXvk3D850pDd/rTkoOHFndTp0vKWvtASGo
+LCX0UCAleJJjzxPFqmqxdvQBbJi7NfBgV/j8zg4lzpl9dMNFpRiYE3hkz/wYL0ID
+Fib8ZDHz5SR0nggo+hdFvqagAbIaiO3+t1zmynna+/VhCgiGFhBFkKWbSbDvtnRd
+aTjBNNdvsF+t8Mn8rMLpxbx/sproqL0o+R1BIl4aDigCOZzkZ8ocXGljUoWEqVWB
+vx9e9SOLAgMBAAECggEBAL7RMg6ej37a+EsYz/f6kwHdPW82a+5sLgsMI8tMQZnD
+ngdS5Yn81/AFRuv95uGu4lgL/ckYg0rWuYQE/TKPn9LorVWACMn1rwwzQVxQYPyH
+x6sKph7AgKJfNn+C+pv16i01qNfwzhP3DpV5Je+/OhPGz/4vwIp7c+CA8slvBFPj
+1kBkAenA2AN59S43/4dKLKG9q3XUCJmcWODdslSXmNqd7jFCt27mqKIbsM9xBmG7
+8lVD6oQneChwtK+zaB/ff7vwynnUSSeEzW1GlJrSap0yj8jMfex96Khyd4u5UgVb
+DLY9k9TfqGlS4jJx9gLlBO5NoGOPIhESsjHobSDxRYECgYEA5ATBA8oHCEALsn6X
+q1erS/5lw5ly7Fq44Tz4P73Oz5qSUsyEe5u606+BfZN6tTQfItHxP2EdWOyoIzS6
+9+C/2QB9vLbx9IsH8aajB63iI5CJT6sU1oRYqlB0cNvWVy1EZ7Pxl5oACBX2sEtD
+ZSgkRJwaQmYtI6J2VCGSEbkCdMsCgYEA5IXY/a7NIeereWWvdvFDutvUD2gChU5U
+55RRWWHzebtTdRALJVoGa1BAyje5ehlTQWjGGX0NG6oinZD9QH3FYtGWIpgwNMeG
+b2etUip/k5f2lBhbvvcPeCcz4v3jLrMd0vU+Jc24X+/izVb3yFJag6ZOhCsz82j8
+WnZNjK2M9EECgYEAqiNV9kLX7nMDh2NoPmSDH4gqXMHx+6RSEVbSEZXKbCP1DK0o
+KadwxyVM5OuXgv/qP6wRa+5F3KVxbBubavwbiosQRzDm50aaXdiuCzvW4hymKHkK
+amqEUkkIKXIPxCq1wP+GxE0XuvDQiokON7u1HDCyc1sUUWOXEX2fJXQ7/fMCgYEA
+kaKTZSiPZnokF5usNRsQ1PbfsGnSoW4IQgWNym7YIc42I7Zzw/wZdy6P+8+DjsKx
+AlBpXzkIr4a/xLbwDreYoZ98FNP0dM5raHgkRub6ou8Hn93eKld9Lk+di53NuKdB
+7H2Ke8EdLVbNrZstEicZtCi6hRSbaRaRLH2UcoDwAYECgYEAluxnLjG5PiGN4CtK
+zwrjxdoiJEWo3CBr6xsJT/u3ZkRRvNZS1VLWV62PMEzueXojO0cHKBNp9vMt0nRn
+KWCQVpUTHMo2vR0ZBAw4ZJfaNFys/YD5aaCPMvorW/TJvf1ZvZAu2I+xR9GyLO9x
+razU2nUkkWYJB+GS7fSpvkr1Ud0=
+-----END PRIVATE KEY-----
+version: '3'
+
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: requirements/nginx/Dockerfile
+    container_name: nginx
+    depends_on:
+      - wordpress
+    ports:
+      - "443:443"
+    networks:
+      - inception
+    volumes:
+      - ./requirements/nginx/conf/:/etc/nginx/http.d/
+      - ./requirements/nginx/tools/:/etc/nginx/ssl/
+      - wp-volume:/var/www
+    restart: always
+
+  mariadb:
+    build:
+      context: .
+      dockerfile: requirements/mariadb/Dockerfile
+      args:
+        DB_NAME: ${DB_NAME}
+        DB_USER: ${DB_USER}
+        DB_PASS: ${DB_PASS}
+        DB_ROOT: ${DB_ROOT}
+    container_name: mariadb
+    ports:
+      - "3306:3306"
+    networks:
+      - inception
+    volumes:
+      - db-volume:/var/lib/mysql
+    restart: always
+
+  wordpress:
+    build:
+      context: .
+      dockerfile: requirements/wordpress/Dockerfile
+      args:
+        DB_NAME: ${DB_NAME}
+        DB_USER: ${DB_USER}
+        DB_PASS: ${DB_PASS}
+    container_name: wordpress
+    depends_on:
+      - mariadb
+    networks:
+      - inception
+    volumes:
+      - wp-volume:/var/www/
+    restart: always
+
+
+volumes:
+  wp-volume:
+    driver_opts:
+      o: bind
+      type: none
+      device: /home/${USER}/data/wordpress
+  db-volume:
+    driver_opts:
+      o: bind
+      type: none
+      device: /home/${USER}/data/mariadb
+
+networks:
+  inception:
+    driver: bridge
+DOMAIN_NAME=lporoshi.42.fr
+CERT_=./requirements/tools/lporoshi.42.fr.crt
+KEY_=./requirements/tools/lporoshi.42.fr.key
+DB_NAME=wordpress
+DB_ROOT=123
+DB_USER=mariadb_user
+DB_PASS=123
