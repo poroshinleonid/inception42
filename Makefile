@@ -1,32 +1,33 @@
-name = simple_hginx_html
+NAME = inception
 
 all: up
 
 up:
-	@printf "Starting configuration ${name}...\n"
-	@docker-compose -f ./docker-compose.yml up -d
+	@printf "Starting ${NAME}...\n"
+	@docker-compose -f ./srcs/docker-compose.yml --env-file srcs/.env up -d
 
 build:
-	@printf "Building ${name}...\n"
-	@docker-compose -f./docker-compose.yml up -d --build
+	@printf "Building ${NAME}...\n"
+	@docker-compose -f./docker-compose.yml --env-file srcs/.env up -d --build
 
 down:
-	@printf "Stopping ${name}...\n"
-	@docker-compose -f ./docker-compose.yml down
+	@printf "Stopping ${NAME}...\n"
+	@docker-compose -f ./docker-compose.yml --env-file srcs/.env down
 
-re:
-	@printf "Rebuilding and running ${name}...\n"
-	@docker-compose -f ./docker-compose.yml up -d --build
-clean:
-	@printf "Cleaning ${name}...\n"
+re: fclean all
+
+clean: down
+	@printf "Cleaning ${NAME}...\n"
 	@docker system prune --a
 
 fclean:
-	@printf "Fcleaning ${name}...\n"
+	@printf "Fcleaning ${NAME}...\n"
 	@docker stop $$(docker ps -qa) || true
 	@docker system prune --all --force --volumes
 	@docker network prune --force
 	@docker volume prune --force
 	rm -rf /home/${USER}/data/*
-user:
-	@echo ${USER}
+
+.PHONY	: all build down re clean fclean
+
+#.env variables: DB_NAME DB_USER DB_PASS DB_ROOT
