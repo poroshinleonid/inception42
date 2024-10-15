@@ -5,8 +5,6 @@ ARG DB_NAME \
 	DB_PASS
 RUN apk update && apk add --no-cache mariadb mariadb-client
 
-RUN sed -i "s|bind-address = 127.0.0.1|bind-address = 0.0.0.0|g" \
-	/etc/mysql/mariadb.conf.d/50-server.cnf
 
 RUN mkdir /var/run/mysqld; \
     chmod 777 /var/run/mysqld; \
