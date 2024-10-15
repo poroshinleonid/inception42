@@ -4,6 +4,11 @@ ARG DB_NAME \
 	DB_USER \
 	DB_PAS
 
+RUN if [ ! -d "/home/${USER}/data" ]; then \
+        mkdir ~/data; \
+        mkdir ~/data/mariadb; \
+        mkdir ~/data/wordpress; fi
+
 RUN apk update && apk upgrade && apk add --no-cache \
 	php \
 	php-fpm \
@@ -32,8 +37,7 @@ WORKDIR /var/www
 RUN wget https://wordpress.org/latest.zip && \
 	unzip latest.zip && \
 	cp -rf wordpress/* . && \
-	rm -rf wordpress latest.zip && \
-	ls -lah
+	rm -rf wordpress latest.zip
 
 COPY ./requirements/wordpress/conf/wp-config-create.sh .
 RUN sh wp-config-create.sh && rm wp-config-create.sh && \
