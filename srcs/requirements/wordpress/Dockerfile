@@ -2,7 +2,7 @@ FROM alpine:3.19
 
 ARG DB_NAME \
 	DB_USER \
-	DB_PAS
+	DB_PASS
 
 RUN if [ ! -d "/home/${USER}/data" ]; then \
         mkdir ~/data; \
@@ -15,8 +15,11 @@ RUN apk update && apk upgrade && apk add --no-cache \
 	php-mysqli\
 	php-json \
 	php-curl \
+  php-phar \
 	php-dom \
-	php-exif \
+  php-session \
+  php-iconv \
+  php-exif \
 	php-fileinfo \
 	php-mbstring \
 	php-openssl \
@@ -24,6 +27,7 @@ RUN apk update && apk upgrade && apk add --no-cache \
 	php-zip \
 	php-redis \
 	wget \
+  curl \
 	unzip && \
 	sed -i "s|listen = 127.0.0.1:9000|listen = 9000|g" \
 	/etc/php82/php-fpm.d/www.conf && \
@@ -34,14 +38,20 @@ RUN apk update && apk upgrade && apk add --no-cache \
 	rm -f /var/cache/apk/*
 WORKDIR /var/www
 
-RUN wget https://wordpress.org/latest.zip && \
-	unzip latest.zip && \
-	cp -rf wordpress/* . && \
-	rm -rf wordpress latest.zip
+# RUN wget https://wordpress.org/wordpress-6.6.2.zip && \
+# 	unzip wordpress-6.6.2.zip && \
+# 	cp -rf wordpress/* . && \
+# 	rm -rf wordpress wordpress-6.6.2.zip && \
+#   chmod -R 0777 ./wp-content/
 
-COPY ./requirements/wordpress/conf/wp-config-create.sh .
-RUN sh wp-config-create.sh && rm wp-config-create.sh && \
-	chmod -R 0777 ./wp-content/
-RUN ls -l /usr/sbin/
+COPY ./requirements/wordpress/conf/wp-config.php /var/www/wp-config.php
 
-CMD ["/usr/sbin/php-fpm82", "-F"]
+COPY ./requirements/wordpress/tools/wp-configure.sh /var/www/wp-configure.sh
+RUN sh wp-configure.sh && rm wp-configure.sh
+
+# COPY ./requirements/wordpress/conf/wp-config-create.sh .
+# RUN sh wp-config-create.sh && rm wp-config-create.sh && \
+# 	chmod -R 0777 ./wp-content/
+# RUN ls -l /usr/sbin/
+
+ENTRYPOINT ["/usr/sbin/php-fpm82", "-F"]
