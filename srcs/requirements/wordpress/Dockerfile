@@ -27,7 +27,8 @@ RUN apk update && apk upgrade && apk add --no-cache \
 	php-zip \
 	php-redis \
 	wget \
-  curl \
+  	curl \
+	mysql-client \
 	unzip && \
 	sed -i "s|listen = 127.0.0.1:9000|listen = 9000|g" \
 	/etc/php82/php-fpm.d/www.conf && \
@@ -38,13 +39,13 @@ RUN apk update && apk upgrade && apk add --no-cache \
 	rm -f /var/cache/apk/*
 WORKDIR /var/www
 
-# RUN wget https://wordpress.org/wordpress-6.6.2.zip && \
-# 	unzip wordpress-6.6.2.zip && \
-# 	cp -rf wordpress/* . && \
-# 	rm -rf wordpress wordpress-6.6.2.zip && \
-#   chmod -R 0777 ./wp-content/
+RUN wget https://wordpress.org/wordpress-6.6.2.zip && \
+	unzip wordpress-6.6.2.zip && \
+	cp -rf wordpress/* . && \
+	rm -rf wordpress wordpress-6.6.2.zip && \
+  chmod -R 0777 ./wp-content/
 
-COPY ./requirements/wordpress/conf/wp-config.php /var/www/wp-config.php
+# COPY ./requirements/wordpress/conf/wp-config.php /var/www/wp-config.php
 
 COPY ./requirements/wordpress/tools/wp-configure.sh /var/www/wp-configure.sh
 RUN sh wp-configure.sh && rm wp-configure.sh

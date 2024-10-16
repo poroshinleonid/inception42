@@ -24,7 +24,7 @@ services:
         DB_NAME: ${DB_NAME}
         DB_USER: ${DB_USER}
         DB_PASS: ${DB_PASS}
-        DB_ROOT: ${DB_ROOT}
+        DB_ROOT_PASS: ${DB_ROOT_PASS}
     container_name: mariadb
     ports:
       - "3306:3306"
@@ -32,7 +32,11 @@ services:
       - inception
     volumes:
       - db-volume:/var/lib/mysql
-    restart: always
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   wordpress:
     build:
@@ -48,7 +52,8 @@ services:
         WP_USR_PASS: ${WP_ADM_PASS}
     container_name: wordpress
     depends_on:
-      - mariadb
+      mariadb:
+        condition: service_healthy
     networks:
       - inception
     volumes:
@@ -58,15 +63,19 @@ services:
 
 volumes:
   wp-volume:
+    driver: local
     driver_opts:
       o: bind
       type: none
-      device: /home/${USER}/data/wordpress
+      device: /home/${USER}/data/wordpress/
+    name: wp-volume
   db-volume:
+    driver: local
     driver_opts:
       o: bind
       type: none
-      device: /home/${USER}/data/mariadb
+      device: /home/${USER}/data/mariadb/
+    name: db-volume
 
 networks:
   inception:
