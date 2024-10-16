@@ -1,4 +1,4 @@
 .env
 TODO
 out.txt
-secrets
+secrets/*

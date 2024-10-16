@@ -1,8 +1,15 @@
 FROM alpine:3.19
 
-ARG DB_NAME \
-	DB_USER \
-	DB_PASS
+ENV DB_NAME_FILE=/run/secrets/db_name
+ENV DB_USER_FILE=/run/secrets/db_user
+ENV DB_PASS_FILE=/run/secrets/db_pass
+ENV DB_ROOT_PASS_FILE=/run/secrets/db_root_pass
+
+RUN DB_NAME=$(cat $DB_NAME_FILE) && \
+    DB_USER=$(cat $DB_USER_FILE) && \
+    DB_PASS=$(cat $DB_PASS_FILE) && \
+    DB_ROOT_PASS=$(cat $DB_ROOT_PASS_FILE)
+
 RUN apk update && apk add --no-cache mariadb mariadb-client
 
 

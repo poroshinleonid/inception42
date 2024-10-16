@@ -1,8 +1,24 @@
 FROM alpine:3.19
 
-ARG DB_NAME \
-	DB_USER \
-	DB_PASS
+ENV DB_NAME_FILE=/run/secrets/db_name
+ENV DB_USER_FILE=/run/secrets/db_user
+ENV DB_PASS_FILE=/run/secrets/db_pass
+ENV WP_ADM_FILE=/run/secrets/wp_adm
+ENV WP_ADM_PASS_FILE=/run/secrets/wp_adm_pass
+ENV WP_ADM_MAIL_FILE=/run/secrets/wp_adm_mail
+ENV WP_USR_FILE=/run/secrets/wp_usr
+ENV WP_USR_PASS_FILE=/run/secrets/wp_usr_pass
+ENV WP_USR_MAIL_FILE=/run/secrets/wp_usr_mail
+
+RUN DB_NAME=$(cat $DB_NAME_FILE) && \
+	DB_USER=$(cat $DB_USER_FILE) && \
+	DB_PASS=$(cat $DB_PASS_FILE) && \
+	WP_ADM=$(cat $WP_ADM_FILE) && \
+	WP_ADM_PASS=$(cat $WP_ADM_PASS_FILE) && \
+	WP_ADM_MAIL=$(cat $WP_ADM_MAIL_FILE) && \
+	WP_USR=$(cat $WP_USR_FILE) && \
+	WP_USR_PASS=$(cat $WP_USR_PASS_FILE) && \
+	WP_USR_MAIL=$(cat $WP_USR_MAIL_FILE)
 
 RUN if [ ! -d "/home/${USER}/data" ]; then \
         mkdir ~/data; \

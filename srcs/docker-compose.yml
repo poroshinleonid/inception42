@@ -20,11 +20,16 @@ services:
     build:
       context: .
       dockerfile: requirements/mariadb/Dockerfile
-      args:
-        DB_NAME: ${DB_NAME}
-        DB_USER: ${DB_USER}
-        DB_PASS: ${DB_PASS}
-        DB_ROOT_PASS: ${DB_ROOT_PASS}
+      secrets:
+        - db_name
+        - db_user
+        - db_pass
+        - db_root_pass
+      environment:
+        DB_NAME: /run/secrets/db_name
+        DB_USER: /run/secrets/db_user
+        DB_PASS: /run/secrets/db_pass
+        DB_ROOT_PASS: /run/secrets/db_root_pass
     container_name: mariadb
     ports:
       - "3306:3306"
@@ -42,14 +47,26 @@ services:
     build:
       context: .
       dockerfile: requirements/wordpress/Dockerfile
-      args:
-        DB_NAME: ${DB_NAME}
-        DB_USER: ${DB_USER}
-        DB_PASS: ${DB_PASS}
-        WP_ADM: ${WP_ADM}
-        WP_ADM_PASS: ${WP_ADM_PASS}
-        WP_USR: ${WP_ADM}
-        WP_USR_PASS: ${WP_ADM_PASS}
+      secrets:
+        - db_name
+        - db_user
+        - db_pass
+        - wp_adm
+        - wp_adm_pass
+        - wp_adm_mail
+        - wp_usr
+        - wp_usr_pass
+        - wp_usr_mail
+      environment:
+        DB_NAME: /run/secrets/db_name
+        DB_USER: /run/secrets/db_user
+        DB_PASS: /run/secrets/db_pass
+        WP_ADM: /run/secrets/wp_adm
+        WP_ADM_PASS: /run/secrets/wp_adm_pass
+        WP_ADM_MAIL: /run/secrets/wp_adm_mail
+        WP_USR: /run/secrets/wp_usr
+        WP_USR_PASS: /run/secrets/wp_usr_pass
+        WP_USR_MAIL: /run/secrets/wp_usr_mail
     container_name: wordpress
     depends_on:
       mariadb:
@@ -60,6 +77,23 @@ services:
       - wp-volume:/var/www/
     restart: always
 
+secrets:
+  db_name:
+    file: ./secrets/db_name.txt
+  db_user:
+    file: ./secrets/db_user.txt
+  db_pass:
+    file: ./secrets/db_pass.txt
+  db_root_pass:
+    file: ./secrets/db_root_pass.txt
+  wp_adm:
+    file: ./secrets/wp_adm.txt
+  wp_adm_pass:
+    file: ./secrets/wp_adm_pass.txt
+  wp_usr:
+    file: ./secrets/wp_usr.txt
+  wp_usr_pass:
+    file: ./secrets/wp_usr_pass.txt
 
 volumes:
   wp-volume:
