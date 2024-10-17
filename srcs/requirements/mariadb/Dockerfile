@@ -33,8 +33,18 @@ RUN mysql_install_db --user=mysql --datadir=/var/lib/mysql
 
 EXPOSE 3306
 
-COPY ./requirements/mariadb/conf/create_db.sh .
-RUN "/bin/sh" "create_db.sh" && rm "create_db.sh"
-USER mysql
-ENTRYPOINT ["/usr/bin/mysqld_safe", "--skip-log-error"]
+# COPY ./requirements/mariadb/conf/create_db.sh .
+# RUN "/bin/sh" "create_db.sh" && rm "create_db.sh"
+# USER mysql
+# ENTRYPOINT ["/usr/bin/mysqld_safe", "--skip-log-error"]
 
+
++# COPY ./requirements/mariadb/conf/create_db.sh .
++# RUN "/bin/sh" "create_db.sh" && rm "create_db.sh"
++# USER mysql
++# ENTRYPOINT ["/usr/bin/mysqld_safe", "--skip-log-error"]
++COPY ./requirements/mariadb/conf/create_db.sh ./create_db.sh
++RUN chmod +x ./create_db.sh
++
++
++ENTRYPOINT ["./create_db.sh"]

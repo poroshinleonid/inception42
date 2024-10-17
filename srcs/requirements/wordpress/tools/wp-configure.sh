@@ -1,24 +1,36 @@
 #!bin/sh
-cat << EOF > /var/www/wp-config.php
-<?php
-define( 'DB_NAME', '${DB_NAME}' );
-define( 'DB_USER', '${DB_USER}' );
-define( 'DB_PASSWORD', '${DB_PASS}' );
-define( 'DB_HOST', 'mariadb' );
-define( 'DB_CHARSET', 'utf8' );
-define( 'DB_COLLATE', '' );
-define( 'FS_METHOD','direct' );
-\$table_prefix = 'wp_';
-define( 'WP_DEBUG', false );
-if ( ! defined( 'ABSPATH' ) ) {
-define( 'ABSPATH', __DIR__ . '/' );}
-require_once ABSPATH . 'wp-settings.php';
-EOF
+# cat << EOF > /var/www/wp-config.php
+# <?php
+# define( 'DB_NAME', '${DB_NAME}' );
+# define( 'DB_USER', '${DB_USER}' );
+# define( 'DB_PASSWORD', '${DB_PASS}' );
+# define( 'DB_HOST', 'mariadb' );
+# define( 'DB_CHARSET', 'utf8' );
+# define( 'DB_COLLATE', '' );
+# define( 'FS_METHOD','direct' );
+# \$table_prefix = 'wp_';
+# define( 'WP_DEBUG', false );
+# if ( ! defined( 'ABSPATH' ) ) {
+# define( 'ABSPATH', __DIR__ . '/' );}
+# require_once ABSPATH . 'wp-settings.php';
+# EOF
 
 WP_DIR=/var/www
 find $WP_DIR -type d -exec chmod 777 {} \;
 find $WP_DIR -type f -exec chmod 777 {} \;
 
+curl -O "https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar"
+chmod +x wp-cli.phar 
+mv wp-cli.phar /usr/local/bin/wp
+wp cli update
+wp core download --allow-root
+
+
+mv /var/www/wp-config-sample.php /var/www/wp-config.php
+sed -i -r "s/database/$DB_NAME/1"   wp-config.php
+sed -i -r "s/database_user/$DB_USER/1"  wp-config.php
+sed -i -r "s/passwod/$DB_PASS/1"    wp-config.php
+sed -i -r "s/localhost/mariadb/1"    wp-config.php
 
 
 

@@ -6,7 +6,7 @@ vol:
 	-@docker volume rm db-volume
 	-@docker volume rm wp-volume
 
-up: build
+up:
 	@printf "Starting ${NAME}...\n"
 	@docker-compose -f ./srcs/docker-compose.yml --env-file srcs/.env up -d
 

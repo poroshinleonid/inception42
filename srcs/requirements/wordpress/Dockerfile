@@ -55,11 +55,11 @@ RUN apk update && apk upgrade && apk add --no-cache \
 	rm -f /var/cache/apk/*
 WORKDIR /var/www
 
-RUN wget https://wordpress.org/wordpress-6.6.2.zip && \
-	unzip wordpress-6.6.2.zip && \
-	cp -rf wordpress/* . && \
-	rm -rf wordpress wordpress-6.6.2.zip && \
-  chmod -R 0777 ./wp-content/
+# RUN wget https://wordpress.org/wordpress-6.6.2.zip && \
+# 	unzip wordpress-6.6.2.zip && \
+# 	cp -rf wordpress/* . && \
+# 	rm -rf wordpress wordpress-6.6.2.zip && \
+#   chmod -R 0777 ./wp-content/
 
 # COPY ./requirements/wordpress/conf/wp-config.php /var/www/wp-config.php
 
@@ -71,4 +71,9 @@ RUN sh wp-configure.sh && rm wp-configure.sh
 # 	chmod -R 0777 ./wp-content/
 # RUN ls -l /usr/sbin/
 
-ENTRYPOINT ["/usr/sbin/php-fpm82", "-F"]
+# ENTRYPOINT ["/usr/sbin/php-fpm82", "-F"]
+
+COPY ./requirements/wordpress/tools/wp-autostart.sh /wp-autostart.sh
+RUN chmod +x /wp-autostart.sh
+
+ENTRYPOINT ["/wp-autostart.sh"]

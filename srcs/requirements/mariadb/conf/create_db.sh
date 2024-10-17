@@ -1,26 +1,19 @@
 #!/bin/sh
 
-# Check if MySQL database directory exists
 if [ ! -d "/var/lib/mysql/mysql" ]; then
     echo "CREATING THE FOLDER FOR MYSQL" 1>&2
     mkdir -p /var/lib/mysql/
     mkdir -p /var/lib/mysql/mysql/
     chown -R mysql:mysql /var/lib/mysql
-
-    # Initialize the database
     mysql_install_db --basedir=/usr --datadir=/var/lib/mysql --user=mysql --rpm
 
-    # Create a temporary file for SQL commands
     tfile=`mktemp`
     if [ ! -f "$tfile" ]; then
-        exit 1  # Use 'exit' instead of 'return' since this is a script
+        exit 1 
     fi
 fi
 
-# Check if the WordPress database directory exists
 if [ ! -d "/var/lib/mysql/wordpress" ]; then
-
-    # Create the SQL file to set up the database and user
     cat << EOF > /tmp/create_db.sql
 USE mysql;
 FLUSH PRIVILEGES;
@@ -38,3 +31,5 @@ EOF
     /usr/bin/mysqld --user=mysql --bootstrap < /tmp/create_db.sql
     rm -f /tmp/create_db.sql
 fi
+
+/usr/bin/mysqld_safe --skip-log-error
