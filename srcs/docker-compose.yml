@@ -90,10 +90,18 @@ secrets:
     file: ./secrets/wp_adm.txt
   wp_adm_pass:
     file: ./secrets/wp_adm_pass.txt
+  wp_adm_mail:
+    file: ./secrets/wp_adm_pass.txt
   wp_usr:
     file: ./secrets/wp_usr.txt
   wp_usr_pass:
     file: ./secrets/wp_usr_pass.txt
+  wp_usr_mail:
+    file: ./secrets/wp_usr_pass.txt
+  wp_url:
+    file: ./secrets/wp_url.txt
+  wp_title:
+    file: ./secrets/wp_title.txt
 
 volumes:
   wp-volume:

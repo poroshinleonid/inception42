@@ -43,6 +43,29 @@ dir:
 
 .PHONY	: all build down re clean fclean
 
-#.env variables: DB_NAME DB_USER DB_PASS DB_ROOT_PASS
-#RUN sed -i "s|bind-address = 127.0.0.1|bind-address = 0.0.0.0|g" \
-	/etc/mysql/mariadb.conf.d/50-server.cnf
+
+# secrets:
+#   db_name:
+#     file: ./secrets/db_name.txt
+#   db_user:
+#     file: ./secrets/db_user.txt
+#   db_pass:
+#     file: ./secrets/db_pass.txt
+#   db_root_pass:
+#     file: ./secrets/db_root_pass.txt
+#   wp_adm:
+#     file: ./secrets/wp_adm.txt
+#   wp_adm_pass:
+#     file: ./secrets/wp_adm_pass.txt
+#   wp_adm_mail:
+#     file: ./secrets/wp_adm_pass.txt
+#   wp_usr:
+#     file: ./secrets/wp_usr.txt
+#   wp_usr_pass:
+#     file: ./secrets/wp_usr_pass.txt
+#   wp_usr_mail:
+#     file: ./secrets/wp_usr_pass.txt
+#   wp_url:
+#     file: ./secrets/wp_url.txt
+#   wp_title:
+#     file: ./secrets/wp_title.txt
