@@ -9,6 +9,9 @@ ENV WP_ADM_MAIL_FILE=/run/secrets/wp_adm_mail
 ENV WP_USR_FILE=/run/secrets/wp_usr
 ENV WP_USR_PASS_FILE=/run/secrets/wp_usr_pass
 ENV WP_USR_MAIL_FILE=/run/secrets/wp_usr_mail
+ENV WP_URL_FILE=/run/secrets/wp_url
+ENV WP_TITLE_FILE=/run/secrets/wp_title
+
 
 RUN DB_NAME=$(cat $DB_NAME_FILE) && \
 	DB_USER=$(cat $DB_USER_FILE) && \
@@ -18,7 +21,9 @@ RUN DB_NAME=$(cat $DB_NAME_FILE) && \
 	WP_ADM_MAIL=$(cat $WP_ADM_MAIL_FILE) && \
 	WP_USR=$(cat $WP_USR_FILE) && \
 	WP_USR_PASS=$(cat $WP_USR_PASS_FILE) && \
-	WP_USR_MAIL=$(cat $WP_USR_MAIL_FILE)
+	WP_USR_MAIL=$(cat $WP_USR_MAIL_FILE) && \
+	WP_URL=$(cat $WP_URL_FILE) && \
+	WP_TITLE=$(cat $WP_TITLE_FILE)
 
 RUN if [ ! -d "/home/${USER}/data" ]; then \
         mkdir ~/data; \

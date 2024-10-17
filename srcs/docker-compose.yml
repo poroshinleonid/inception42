@@ -20,16 +20,16 @@ services:
     build:
       context: .
       dockerfile: requirements/mariadb/Dockerfile
-      secrets:
-        - db_name
-        - db_user
-        - db_pass
-        - db_root_pass
-      environment:
-        DB_NAME: /run/secrets/db_name
-        DB_USER: /run/secrets/db_user
-        DB_PASS: /run/secrets/db_pass
-        DB_ROOT_PASS: /run/secrets/db_root_pass
+    secrets:
+      - db_name
+      - db_user
+      - db_pass
+      - db_root_pass
+    environment:
+      DB_NAME: /run/secrets/db_name
+      DB_USER: /run/secrets/db_user
+      DB_PASS: /run/secrets/db_pass
+      DB_ROOT_PASS: /run/secrets/db_root_pass
     container_name: mariadb
     ports:
       - "3306:3306"
@@ -47,26 +47,30 @@ services:
     build:
       context: .
       dockerfile: requirements/wordpress/Dockerfile
-      secrets:
-        - db_name
-        - db_user
-        - db_pass
-        - wp_adm
-        - wp_adm_pass
-        - wp_adm_mail
-        - wp_usr
-        - wp_usr_pass
-        - wp_usr_mail
-      environment:
-        DB_NAME: /run/secrets/db_name
-        DB_USER: /run/secrets/db_user
-        DB_PASS: /run/secrets/db_pass
-        WP_ADM: /run/secrets/wp_adm
-        WP_ADM_PASS: /run/secrets/wp_adm_pass
-        WP_ADM_MAIL: /run/secrets/wp_adm_mail
-        WP_USR: /run/secrets/wp_usr
-        WP_USR_PASS: /run/secrets/wp_usr_pass
-        WP_USR_MAIL: /run/secrets/wp_usr_mail
+    secrets:
+      - db_name
+      - db_user
+      - db_pass
+      - wp_adm
+      - wp_adm_pass
+      - wp_adm_mail
+      - wp_usr
+      - wp_usr_pass
+      - wp_usr_mail
+      - wp_url
+      - wp_title
+    environment:
+      DB_NAME: /run/secrets/db_name
+      DB_USER: /run/secrets/db_user
+      DB_PASS: /run/secrets/db_pass
+      WP_ADM: /run/secrets/wp_adm
+      WP_ADM_PASS: /run/secrets/wp_adm_pass
+      WP_ADM_MAIL: /run/secrets/wp_adm_mail
+      WP_USR: /run/secrets/wp_usr
+      WP_USR_PASS: /run/secrets/wp_usr_pass
+      WP_USR_MAIL: /run/secrets/wp_usr_mail
+      WP_URL: /run/secrets/wp_url
+      WP_TITLE: /run/secrets/wp_title
     container_name: wordpress
     depends_on:
       mariadb:
@@ -97,7 +101,7 @@ secrets:
   wp_usr_pass:
     file: ./secrets/wp_usr_pass.txt
   wp_usr_mail:
-    file: ./secrets/wp_usr_pass.txt
+    file: ./secrets/wp_usr_mail.txt
   wp_url:
     file: ./secrets/wp_url.txt
   wp_title:
