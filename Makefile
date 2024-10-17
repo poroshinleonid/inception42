@@ -15,7 +15,7 @@ build:
 	@mkdir -p /home/${USER}/data/
 	@mkdir -p /home/${USER}/data/wordpress/
 	@mkdir -p /home/${USER}/data/mariadb/
-	@docker-compose --progress=plain -f ./srcs/docker-compose.yml --env-file srcs/.env build  --no-cache
+	@docker-compose -f ./srcs/docker-compose.yml --env-file srcs/.env build  --no-cache --progress=plain
 
 down:
 	@printf "Stopping ${NAME}...\n"
@@ -25,9 +25,9 @@ re: fclean all
 
 clean: down
 	@printf "Cleaning ${NAME}...\n"
-	@docker system prune --a
+	@docker system prune --all
 
-fclean:
+fclean: clean
 	@printf "Fcleaning ${NAME}...\n"
 	-@docker stop $$(docker ps -qa) || true
 	-@docker system prune --all --force --volumes
@@ -40,6 +40,12 @@ fclean:
 
 dir:
 	@mkdir -p /home/${USER}/data
+
+remake_wp:
+	@docker-compose -f ./srcs/docker-compose.yml --env-file srcs/.env build --no-cache --progress=plain wordpress
+	@docker-compose -f ./srcs/docker-compose.yml --env-file srcs/.env up -d
+	@docker-compose -f ./srcs/docker-compose.yml --env-file srcs/.env logs
+
 
 .PHONY	: all build down re clean fclean
 

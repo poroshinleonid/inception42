@@ -1,14 +1,9 @@
 FROM alpine:3.19
 
-ENV DB_NAME_FILE=/run/secrets/db_name
-ENV DB_USER_FILE=/run/secrets/db_user
-ENV DB_PASS_FILE=/run/secrets/db_pass
-ENV DB_ROOT_PASS_FILE=/run/secrets/db_root_pass
-
-RUN DB_NAME=$(cat $DB_NAME_FILE) && \
-    DB_USER=$(cat $DB_USER_FILE) && \
-    DB_PASS=$(cat $DB_PASS_FILE) && \
-    DB_ROOT_PASS=$(cat $DB_ROOT_PASS_FILE)
+ARG DB_NAME
+ARG DB_USER
+ARG DB_PASS
+ARG DB_ROOT_PASS
 
 RUN apk update && apk add --no-cache mariadb mariadb-client
 
@@ -40,6 +35,8 @@ EXPOSE 3306
 
 COPY ./requirements/mariadb/conf/create_db.sh ./create_db.sh
 RUN chmod +x ./create_db.sh
-
-
+# RUN "/bin/sh" "create_db.sh" && rm "create_db.sh"
 ENTRYPOINT ["./create_db.sh"]
+
+
+# ENTRYPOINT ["/usr/bin/mysqld_safe", "--skip-log-error"]

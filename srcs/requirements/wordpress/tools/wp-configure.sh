@@ -1,4 +1,4 @@
-#!bin/sh
+#!/bin/sh
 # cat << EOF > /var/www/wp-config.php
 # <?php
 # define( 'DB_NAME', '${DB_NAME}' );
@@ -15,22 +15,31 @@
 # require_once ABSPATH . 'wp-settings.php';
 # EOF
 
-WP_DIR=/var/www
-find $WP_DIR -type d -exec chmod 777 {} \;
-find $WP_DIR -type f -exec chmod 777 {} \;
+WP_DIR=/var/www/
+chown -R www-data:www-data $WP_DIR
+find $WP_DIR -type d -exec chmod 755 {} \;
+find $WP_DIR -type f -exec chmod 644 {} \;
 
 curl -O "https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar"
 chmod +x wp-cli.phar 
 mv wp-cli.phar /usr/local/bin/wp
 wp cli update
-wp core download --allow-root
+
+wget https://wordpress.org/wordpress-6.6.2.zip && \
+	unzip wordpress-6.6.2.zip && \
+	cp -rf wordpress/* . && \
+	rm -rf wordpress wordpress-6.6.2.zip && \
+  chmod -R 0777 ./wp-content/
+
+wp core download --allow-root --force
 
 
-mv /var/www/wp-config-sample.php /var/www/wp-config.php
-sed -i -r "s/database/$DB_NAME/1"   wp-config.php
-sed -i -r "s/database_user/$DB_USER/1"  wp-config.php
-sed -i -r "s/passwod/$DB_PASS/1"    wp-config.php
-sed -i -r "s/localhost/mariadb/1"    wp-config.php
+
+# mv /var/www/wp-config-sample.php /var/www/wp-config.php
+# sed -i -r "s/database/$DB_NAME/1"   wp-config.php
+# sed -i -r "s/database_user/$DB_USER/1"  wp-config.php
+# sed -i -r "s/passwod/$DB_PASS/1"    wp-config.php
+# sed -i -r "s/localhost/mariadb/1"    wp-config.php
 
 
 
