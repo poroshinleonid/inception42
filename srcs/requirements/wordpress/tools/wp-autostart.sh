@@ -34,10 +34,16 @@ else
         --admin_email=$WP_ADM_MAIL \
         --allow-root && \
     wp user create $WP_USR $WP_USR_MAIL \
-    --role=author --user_pass=$WP_USR_PASS \
-    --allow-root && \
-    wp theme install generatepress --activate --allow-root;
+    --role=subscriber --user_pass=$WP_USR_PASS;
+    wp theme install astra --activate --allow-root;
+    wp menu create "Main Menu"
+    wp menu item add-custom "Main Menu" "Login" "/wp-login.php"
+    wp menu location list
+    wp menu location assign "Main Menu" primary
 fi
+
+
+
 
 mkdir /run/php;
 WP_DIR=/var/www/

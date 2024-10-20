@@ -4,10 +4,6 @@ all: build up
 
 $(NAME): all
 
-vol:
-	-@docker volume rm db-volume
-	-@docker volume rm wp-volume
-
 up:
 	@printf "Starting ${NAME}...\n"
 	@docker-compose -f ./srcs/docker-compose.yml --env-file srcs/.env up -d
@@ -41,37 +37,4 @@ fclean: clean
 dir:
 	@mkdir -p /home/${USER}/data
 
-remake_wp:
-	@docker-compose -f ./srcs/docker-compose.yml --env-file srcs/.env build --no-cache --progress=plain wordpress
-	@docker-compose -f ./srcs/docker-compose.yml --env-file srcs/.env up -d
-	@docker-compose -f ./srcs/docker-compose.yml --env-file srcs/.env logs
-
-
 .PHONY	: all build down re clean fclean
-
-
-# secrets:
-#   db_name:
-#     file: ./secrets/db_name.txt
-#   db_user:
-#     file: ./secrets/db_user.txt
-#   db_pass:
-#     file: ./secrets/db_pass.txt
-#   db_root_pass:
-#     file: ./secrets/db_root_pass.txt
-#   wp_adm:
-#     file: ./secrets/wp_adm.txt
-#   wp_adm_pass:
-#     file: ./secrets/wp_adm_pass.txt
-#   wp_adm_mail:
-#     file: ./secrets/wp_adm_pass.txt
-#   wp_usr:
-#     file: ./secrets/wp_usr.txt
-#   wp_usr_pass:
-#     file: ./secrets/wp_usr_pass.txt
-#   wp_usr_mail:
-#     file: ./secrets/wp_usr_pass.txt
-#   wp_url:
-#     file: ./secrets/wp_url.txt
-#   wp_title:
-#     file: ./secrets/wp_title.txt

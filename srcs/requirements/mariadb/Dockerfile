@@ -1,4 +1,4 @@
-FROM alpine:3.19
+FROM alpine:3.19.2
 
 ARG DB_NAME
 ARG DB_USER
@@ -26,9 +26,6 @@ RUN mkdir -p /var/run/mysqld; \
 
 RUN mysql_install_db --user=mysql --datadir=/var/lib/mysql
 
-COPY ./requirements/mariadb/conf/create_db.sh ./create_db.sh
-RUN chmod +x ./create_db.sh
-ENTRYPOINT ["./create_db.sh"]
-
-
-# ENTRYPOINT ["/usr/bin/mysqld_safe", "--skip-log-error"]
+COPY ./requirements/mariadb/conf/run_mysql.sh ./run_mysql.sh
+RUN chmod +x ./run_mysql.sh
+ENTRYPOINT ["./run_mysql.sh"]
