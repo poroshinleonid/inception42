@@ -1,6 +1,8 @@
 NAME = inception
 
-all: up
+all: build up
+
+$(NAME): all
 
 vol:
 	-@docker volume rm db-volume
@@ -15,7 +17,7 @@ build:
 	@mkdir -p /home/${USER}/data/
 	@mkdir -p /home/${USER}/data/wordpress/
 	@mkdir -p /home/${USER}/data/mariadb/
-	@docker-compose -f ./srcs/docker-compose.yml --env-file srcs/.env build  --no-cache --progress=plain
+	@docker-compose -f ./srcs/docker-compose.yml --env-file srcs/.env --progress=plain build --no-cache
 
 down:
 	@printf "Stopping ${NAME}...\n"
@@ -31,13 +33,11 @@ fclean: clean
 	@printf "Fcleaning ${NAME}...\n"
 	-@docker stop $$(docker ps -qa) || true
 	-@docker system prune --all --force --volumes
-	@docker network prune --force
-	@docker volume prune --force
+	-@docker network prune --force
+	-@docker volume prune --force
 	-@docker volume rm db-volume
 	-@docker volume rm wp-volume
-	-@rm -rf /home/${USER}/data/*
-	-@rmdir /home/${USER}/data/
-
+	-@sudo rm -rf /home/${USER}/data/
 dir:
 	@mkdir -p /home/${USER}/data
 

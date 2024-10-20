@@ -1,15 +1,9 @@
 #!/bin/sh
 cd /var/www;
 
-# rm -f /var/www/wp-config.php
-
-# wp config create --dbname=$DB_NAME --dbuser=$DB_USER --dbpass=$DB_PASS --dbhost=mariadb --dbcharset='utf8' --dbcollate='' --extra-php <<PHP
-# define( 'WP_DEBUG', false);
-# if ( ~ defined( 'ABSPATH' ) ) {
-# define ( 'ABSPATH', __DIR__ . '/' );}
-# require_once ABSPATH . 'wp-settings.php'
-# PHP
-echo "GENERATING CONFIG..."
+if [ -f "wordpress.php" ]; then
+    echo "wordpress.php exists, proceeding..."
+else
 cat << EOF > /var/www/wp-config.php
 <?php
 define( 'DB_NAME', '${DB_NAME}' );
@@ -25,21 +19,28 @@ if ( ! defined( 'ABSPATH' ) ) {
 define( 'ABSPATH', __DIR__ . '/' );}
 require_once ABSPATH . 'wp-settings.php';
 EOF
+fi
 
 
-echo "INSTALLING WORDPRESS"
-wp core install --url=$WP_URL --title=$WP_TITLE --admin_user=$WP_ADM --admin_password=$WP_ADM_PASS --admin_email=$WP_ADM_MAIL --allow-root;
-
-echo "CREATING WORDPRESS USER"
-wp user create $WP_USR $WP_USR_MAIL --role=author --user_pass=$WP_USR_PASS --allow-root;
 
 
-# echo "INSTALLING WP THEME"
-# wp theme install generatepress --activate --allow-root;
+if wp core is-installed --path="$PWD"; then
+    echo "WordPress is already installed."
+else
+    wp core install --url=$WP_URL \
+        --title=$WP_TITLE \
+        --admin_user=$WP_ADM \
+        --admin_password=$WP_ADM_PASS \
+        --admin_email=$WP_ADM_MAIL \
+        --allow-root && \
+    wp user create $WP_USR $WP_USR_MAIL \
+    --role=author --user_pass=$WP_USR_PASS \
+    --allow-root && \
+    wp theme install generatepress --activate --allow-root;
+fi
+
 mkdir /run/php;
-
 WP_DIR=/var/www/
-chown -R www-data:www-data $WP_DIR
 find $WP_DIR -type d -exec chmod 755 {} \;
 find $WP_DIR -type f -exec chmod 644 {} \;
 
