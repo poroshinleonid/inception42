@@ -21,9 +21,6 @@ require_once ABSPATH . 'wp-settings.php';
 EOF
 fi
 
-
-
-
 if wp core is-installed --path="$PWD"; then
     echo "WordPress is already installed."
 else
